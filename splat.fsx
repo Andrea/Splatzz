@@ -224,39 +224,7 @@ let newDrop x color playerNumber=
     color=color }
 let p1 () = newDrop (0. + 5.)  p1Color "1"
 let p2 () = newDrop (width - fst parachuteWidhtHeight) p2Color "2"
-// let newGrow () = newDrop grow
-// let newShrink () = newDrop shrink
-(**
-Inside the game loop, we will generate blobs randomly, but we keep a counter of
-ticks to make sure that we do not generate new blobs too often. The `updateDrops`
-function takes current drops and a countdown and returns a pair with new drops and
-a new countdown. It implements simple logic:
 
- - If we generated drop in last 8 steps, do nothing and decrement counter
- - Roll an 8 sided dice and if we get 1, generate new blob
-   (2/3 are shrinkind and 1/3 are growing)
- - Otherwise, do nothing and return previous state
-
-*)
-/// Update drops and countdown in each step
-
-// let updateDrops drops countdown =
-//   if countdown > 0 then
-//     drops, countdown - 1
-//   elif floor(rand()*8.) = 0. then
-//     let drop =
-//       if floor(rand()*3.) = 0. then newGrow()
-//       else newShrink()
-//     drop::drops, 8
-//   else drops, countdown
-
-/// Count growing and shrinking drops in the list
-// let countDrops drops =
-//   let count color =
-//     drops
-//     |> List.filter (fun drop -> drop.color = color)
-//     |> List.length
-//   count grow, count shrink
 
 (**
 ## Asynchronous game loop
