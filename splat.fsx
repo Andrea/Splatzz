@@ -2,14 +2,8 @@
  - title: Super amazing splat 
  - tagline: Splat clone using HTML5 canvas
  - app-style: height:668px; width:900px; margin:20px auto 20px auto;
- - intro: [classic Splat game](https://twitter.com/ptrelford/status/475395178208174080), originally hosted
-   [on BitBucket](https://bitbucket.org/ptrelford/ozmo) ported to Fable! Shows how to handle keyboard events and
-   use HTML5 canvas. You can also get it (as a JavaScript app) from [the Windows
-   Store](https://www.microsoft.com/en-gb/store/apps/ozmo/9nblggh4rjng). View the [raw source code on
-   GitHub](https://github.com/fsprojects/Fable/blob/master/samples/browser/ozmo/ozmo.fsx).
+ - intro: [classic Splat game] Based looely on the Ozmos game
    To play the game, use left and right keys!
-
-
 *)
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
@@ -70,6 +64,7 @@ let height = 668.
 let floorHeight = 100.
 /// Height of the atmosphere - the yellow gradient
 let atmosHeight = 300.
+let parachuteWidhtHeight = 62., 74.
 
 Keyboard.init()
 
@@ -134,6 +129,8 @@ type Blob =
   { X:float; Y:float;
     vx:float; vy:float;
     image: string;
+    width: float;
+    heigth: float;
     Radius:float; color:string }
 (**
 Drawing blob on the canvas is quite easy - the following function does that using
@@ -152,9 +149,10 @@ let drawBlob (ctx:CanvasRenderingContext2D)
     ctx.strokeStyle <- U3.Case1 blob.color
     ctx.stroke()
   else
-    blob.image
-    |> Win.image
-    |> Win.position (blob.X, blob.Y)
+    if (blob.Y < height - floorHeight - fst parachuteWidhtHeight ) then
+      blob.image
+      |> Win.image
+      |> Win.position (blob.X, blob.Y)
 (**
 
 ## Falling blobs and collisions
@@ -214,17 +212,20 @@ Next, we define a couple of helpers for generating and updating the falling blob
 We have black growing blobs and white shrinking blobs. The `newGrow` and `newShrink`
 functions are used to generate new blobs:
 *)
-let grow = "black"
-let shrink = "white"
+let p1Color = "red"
+let p2Color = "blue"
 
-let newDrop color =
-  { X = rand() * width*0.8 + (width*0.1)
+let newDrop x color playerNumber=
+  { X = x
     Y=50.; Radius=10.; vx=0.; vy = 0.0;
-    image= "images/p1.png";
+    image= "images/para"+playerNumber+".png";
+    width = 88.0;
+    heigth = 105.0;
     color=color }
-
-let newGrow () = newDrop grow
-let newShrink () = newDrop shrink
+let p1 () = newDrop (0. + 5.)  p1Color "1"
+let p2 () = newDrop (width - fst parachuteWidhtHeight) p2Color "2"
+// let newGrow () = newDrop grow
+// let newShrink () = newDrop shrink
 (**
 Inside the game loop, we will generate blobs randomly, but we keep a counter of
 ticks to make sure that we do not generate new blobs too often. The `updateDrops`
@@ -238,23 +239,24 @@ a new countdown. It implements simple logic:
 
 *)
 /// Update drops and countdown in each step
-let updateDrops drops countdown =
-  if countdown > 0 then
-    drops, countdown - 1
-  elif floor(rand()*8.) = 0. then
-    let drop =
-      if floor(rand()*3.) = 0. then newGrow()
-      else newShrink()
-    drop::drops, 8
-  else drops, countdown
+
+// let updateDrops drops countdown =
+//   if countdown > 0 then
+//     drops, countdown - 1
+//   elif floor(rand()*8.) = 0. then
+//     let drop =
+//       if floor(rand()*3.) = 0. then newGrow()
+//       else newShrink()
+//     drop::drops, 8
+//   else drops, countdown
 
 /// Count growing and shrinking drops in the list
-let countDrops drops =
-  let count color =
-    drops
-    |> List.filter (fun drop -> drop.color = color)
-    |> List.length
-  count grow, count shrink
+// let countDrops drops =
+//   let count color =
+//     drops
+//     |> List.filter (fun drop -> drop.color = color)
+//     |> List.length
+//   count grow, count shrink
 
 (**
 ## Asynchronous game loop
@@ -288,10 +290,11 @@ recursive functions, each representing one of the states. The `game` and `comple
 states are simple:
 *)
 /// Starts a new game
+
 let rec game () = async {
   let blob =
-    { X = 300.; Y=0.; Radius=50.; vx=0.; vy=0.; image = ""; color="black" }
-  return! update blob [newGrow (); newGrow ()] 0 }
+    { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = ""; heigth= 8.; width = 9.; color="red" }
+  return! update blob [p1 (); p2 ()] 0 }
 
 /// Displays message and sleeps for 10 sec
 and completed () = async {
@@ -311,13 +314,13 @@ and update blob drops countdown = async {
   // let drops, countdown = updateDrops drops countdown
 
   // Count drops, apply physics and count them again
-  let beforeGrow, beforeShrink = countDrops drops
+  // let beforeGrow, beforeShrink = countDrops drops
   let drops =
     drops
-    |> List.map (gravity >> move)
-    |> List.map (fun x -> x |> step (Keyboard.arrows()) )
+    |> List.map (gravity >> move >> step (Keyboard.arrows())) 
     |> absorb blob
-  let afterGrow, afterShrink = countDrops drops
+  
+  // let afterGrow, afterShrink = countDrops drops
   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
 
   //apply keyboard events
