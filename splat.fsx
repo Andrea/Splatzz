@@ -49,7 +49,6 @@ module Win =
       if image.src.IndexOf(src) = -1 then image.src <- src
       image
 
-
 module Keyboard =
   let mutable keysPressed = Set.empty
   let code x = if keysPressed.Contains(x) then 1 else 0
@@ -134,6 +133,7 @@ The type is used for both falling blobs and for the player's blob:
 type Blob =
   { X:float; Y:float;
     vx:float; vy:float;
+    image: string;
     Radius:float; color:string }
 (**
 Drawing blob on the canvas is quite easy - the following function does that using
@@ -141,15 +141,20 @@ the `arc` function of the 2D rendering context of the canvas:
 *)
 let drawBlob (ctx:CanvasRenderingContext2D)
     (canvas:HTMLCanvasElement) (blob:Blob) =
-  ctx.beginPath()
-  ctx.arc
-    ( blob.X, canvas.height - (blob.Y + floorHeight + blob.Radius),
-      blob.Radius, 0., 2. * System.Math.PI, false )
-  ctx.fillStyle <- U3.Case1 blob.color
-  ctx.fill()
-  ctx.lineWidth <- 3.
-  ctx.strokeStyle <- U3.Case1 blob.color
-  ctx.stroke()
+  if (blob.image = "") then
+    ctx.beginPath()
+    ctx.arc
+      ( blob.X, canvas.height - (blob.Y + floorHeight + blob.Radius),
+        blob.Radius, 0., 2. * System.Math.PI, false )
+    ctx.fillStyle <- U3.Case1 blob.color
+    ctx.fill()
+    ctx.lineWidth <- 3.
+    ctx.strokeStyle <- U3.Case1 blob.color
+    ctx.stroke()
+  else
+    blob.image
+    |> Win.image
+    |> Win.position (blob.X, blob.Y)
 (**
 
 ## Falling blobs and collisions
@@ -164,7 +169,7 @@ let direct (dx,dy) (blob:Blob) =
 
 /// Apply gravity on falling blobs - gets faster every step
 let gravity (blob:Blob) =
-  if blob.Y > 0. then { blob with vy = blob.vy - 0.1 }
+  if blob.Y > 0. then { blob with vy = blob.vy + 0.1 }
   else blob
 
 /// Bounde Player's blob off the wall if it hits it
@@ -213,8 +218,9 @@ let grow = "black"
 let shrink = "white"
 
 let newDrop color =
-  { X = rand()*width*0.8 + (width*0.1)
-    Y=600.; Radius=10.; vx=0.; vy = 0.0
+  { X = rand() * width*0.8 + (width*0.1)
+    Y=50.; Radius=10.; vx=0.; vy = 0.0;
+    image= "images/p1.png";
     color=color }
 
 let newGrow () = newDrop grow
@@ -284,7 +290,7 @@ states are simple:
 /// Starts a new game
 let rec game () = async {
   let blob =
-    { X = 300.; Y=0.; Radius=50.; vx=0.; vy=0.; color="black" }
+    { X = 300.; Y=0.; Radius=50.; vx=0.; vy=0.; image = ""; color="black" }
   return! update blob [newGrow (); newGrow ()] 0 }
 
 /// Displays message and sleeps for 10 sec
@@ -309,7 +315,7 @@ and update blob drops countdown = async {
   let drops =
     drops
     |> List.map (gravity >> move)
-    |> List.map (fun x -> x |> step (Keyboard.arrows()))
+    |> List.map (fun x -> x |> step (Keyboard.arrows()) )
     |> absorb blob
   let afterGrow, afterShrink = countDrops drops
   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
@@ -321,12 +327,6 @@ and update blob drops countdown = async {
   drawBg ctx canvas
   for drop in drops do drawBlob ctx canvas drop
   drawBlob ctx canvas blob
-
-  //test
-   "images/para.png"
-   |> Win.image
-   |> Win.position (300., 300.)
-
 
   // If the game completed, switch state
   // otherwise sleep and update recursively!
