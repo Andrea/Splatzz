@@ -30,6 +30,7 @@ module Win =
 
   /// Move element to a specified X Y position
   let position (x,y) (img : HTMLImageElement) =
+      System.Console.WriteLine("X, {0} y {1}", x,y )
       img.style.left <- x.ToString() + "px"
       img.style.top <- (canvas.offsetTop + y).ToString() + "px"
 
@@ -38,10 +39,17 @@ module Win =
 
   /// Get the first <img /> element and set `src` (do
   /// nothing if it is the right one to keep animation)
-  let image (src:string) =
-      let image = document.getElementsByTagName_img().[0]
-      if image.src.IndexOf(src) = -1 then image.src <- src
-      image
+  // let image (src:string) =
+  //     let image = document.getElementsByTagName_img().[0]
+  //     if image.src.IndexOf(src) = -1 then image.src <- src
+  //     image
+
+  let createImage (src: string) =
+    let img = document.createElement_img()
+    img.height <- 150.
+    img.width <- 150.
+    img.src <- src
+    img
 
 module Keyboard =
   let mutable keysPressed = Set.empty
@@ -150,9 +158,9 @@ let drawBlob (ctx:CanvasRenderingContext2D)
     ctx.stroke()
   else
     if (blob.Y < height - floorHeight - fst parachuteWidhtHeight ) then
-      blob.image
-      |> Win.image
-      |> Win.position (blob.X, blob.Y)
+      let i  =blob.image
+              |> Win.createImage
+      ctx.drawImage(U3.Case1 i, blob.X, blob.Y)
 (**
 
 ## Falling blobs and collisions
@@ -259,10 +267,12 @@ states are simple:
 *)
 /// Starts a new game
 
+let p1LandingPad = { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = ""; heigth= 8.; width = 9.; color=p1Color }
+let p2LandingPad = {p1LandingPad with X=500. ; color = p2Color }
+
 let rec game () = async {
-  let blob =
-    { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = ""; heigth= 8.; width = 9.; color="red" }
-  return! update blob [p1 (); p2 ()] 0 }
+
+  return! update [p1LandingPad; p2LandingPad] [p1 (); p2 ()] 0 }
 
 /// Displays message and sleeps for 10 sec
 and completed () = async {
@@ -286,7 +296,7 @@ and update blob drops countdown = async {
   let drops =
     drops
     |> List.map (gravity >> move >> step (Keyboard.arrows())) 
-    |> absorb blob
+    //|> absorb blob
   
   // let afterGrow, afterShrink = countDrops drops
   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
@@ -297,11 +307,12 @@ and update blob drops countdown = async {
   // Render the new game state
   drawBg ctx canvas
   for drop in drops do drawBlob ctx canvas drop
-  drawBlob ctx canvas blob
+  drawBlob ctx canvas p1LandingPad
+  drawBlob ctx canvas p2LandingPad
 
   // If the game completed, switch state
   // otherwise sleep and update recursively!
-  if blob.Radius > 150. then
+  if false then // set some WIN/ LOOSE conditions
     return! completed()
   else
     do! Async.Sleep(int (1000. / 60.))
