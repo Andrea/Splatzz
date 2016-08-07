@@ -30,7 +30,6 @@ type Mikishida =
             | Platform1(x) -> Platform1(x.ApplyDelta())
             | Platform2(x) -> Platform2(x.ApplyDelta())
 
-    
 type Splatzz =
     {
         mikis : Mikishida list
@@ -50,3 +49,8 @@ type Splatzz =
 ///////////////////////////
 // JUAN JUAN JUAN JUAN JUAN
 ///////////////////////////
+let floorHeight = 100.
+let atmosHeight = 300.
+let parachuteWidhtHeight = 62., 74.
+let width = 900.
+let height = 668.

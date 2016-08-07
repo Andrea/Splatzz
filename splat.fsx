@@ -1,5 +1,7 @@
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
+#r "game.fsx"
+        
 open Fable.Core
 open Fable.Import.Browser
 
@@ -159,13 +161,13 @@ let p1LandingPad = { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = ""; heigt
 let p2LandingPad = {p1LandingPad with X=500. ; color = p2Color }
 
 let rec game () = async {
-
   return! update [p1LandingPad; p2LandingPad] [p1 (); p2 ()] 0 }
 
 and completed () = async {
   drawText ("COMPLETED",320.,300.)
   do! Async.Sleep 10000
   return! game () }
+        
 
 and update blob drops countdown = async {
   let drops =
