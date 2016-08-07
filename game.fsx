@@ -9,8 +9,10 @@ type Sprite =
         vy    : double
         image : string
     }
-
-
+    with
+        member this.ApplyDelta() =
+            { this with x = this.x + this.vx; y = this.y + this.vy }
+            
 type Mikishida =
     | Player1 of hasJumped : bool * parachuteOpened : double option *  Sprite
     | Player2 of hasJumped : bool * parachuteOpened : double option *  Sprite
