@@ -1,9 +1,10 @@
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
-#r "game.fsx"
+#load "game.fsx"
 
 open Fable.Core
 open Fable.Import.Browser
+open Game
 
 [<Emit("Math.random()")>]
 let rand (): float = failwith "JS only"
@@ -28,11 +29,11 @@ module Win =
   let dimensions () =
     canvas.width, canvas.height
 
-  let createImage (src: string) =
+  let createImage (src: Image) =
     let img = document.createElement_img()
-    img.height <- 150.
-    img.width <- 150.
-    img.src <- src
+    img.height <- src.width
+    img.width <- src.height
+    img.src <- src.image
     img
 
 module Keyboard =
@@ -89,7 +90,7 @@ type Blob =
     Radius:float; color:string }
 
 let drawBlob (ctx:CanvasRenderingContext2D)
-    (canvas:HTMLCanvasElement) (blob:Blob) =
+    (canvas:HTMLCanvasElement) (blob:Mikishida) =
   if (blob.image = "") then
     ctx.beginPath()
     ctx.arc
@@ -106,41 +107,34 @@ let drawBlob (ctx:CanvasRenderingContext2D)
               |> Win.createImage
       ctx.drawImage(U3.Case1 i, blob.X, blob.Y)
 
-let direct (dx,dy) (blob:Blob) =
+let direct (dx,dy) (blob:Mikishida) =
   { blob with vx = blob.vx + (float dx)/4.0 }
 
-let gravity (blob:Blob) =
+let gravity (blob : Mikishida) =
   if blob.Y > 0. then { blob with vy = blob.vy + 0.1 }
   else blob
 
-let bounce (blob:Blob) =
+let move (blob:Mikishida) =
+  { blob with
+      X = blob.X + blob.vx
+      Y = max 0.0 (blob.Y + blob.vy) }
+
+let step dir blob =
+  blob |> direct dir |> move
+
+let collide (a:Mikishida) (b:Mikishida) =
+  let dx = (a.X - b.X)*(a.X - b.X)
+  let dy = (a.Y - b.Y)*(a.Y - b.Y)
+  let dist = sqrt(dx + dy)
+  dist < abs(a.Radius - b.Radius)
+
+let bounce (blob:Mikishida) =
   let n = width
   if blob.X < 0. then
     { blob with X = -blob.X; vx = -blob.vx }
   elif (blob.X > n) then
     { blob with X = n - (blob.X - n); vx = -blob.vx }
   else blob
-
-let move (blob:Blob) =
-  { blob with
-      X = blob.X + blob.vx
-      Y = max 0.0 (blob.Y + blob.vy) }
-
-let step dir blob =
-  blob |> direct dir |> move |> bounce
-
-let collide (a:Blob) (b:Blob) =
-  let dx = (a.X - b.X)*(a.X - b.X)
-  let dy = (a.Y - b.Y)*(a.Y - b.Y)
-  let dist = sqrt(dx + dy)
-  dist < abs(a.Radius - b.Radius)
-
-let absorb (blob:Blob) (drops:Blob list) =
-  drops |> List.filter (fun drop ->
-    collide blob drop |> not )
-
-let p1Color = "red"
-let p2Color = "blue"
 
 let newDrop x color playerNumber=
   { X = x
@@ -152,8 +146,11 @@ let newDrop x color playerNumber=
 let p1 () = newDrop (0. + 5.)  p1Color "1"
 let p2 () = newDrop (width - fst parachuteWidhtHeight) p2Color "2"
 
-let p1LandingPad = { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = ""; heigth= 8.; width = 9.; color=p1Color }
+let p1LandingPad = { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = "";
+        heigth= 8.; width = 9.; color=p1Color }
+
 let p2LandingPad = {p1LandingPad with X=500. ; color = p2Color }
+
 
 let rec game () = async {
   return! update [p1LandingPad; p2LandingPad] [p1 (); p2 ()] 0 }
@@ -163,10 +160,17 @@ and completed () = async {
   do! Async.Sleep 10000
   return! game () }
 
-and update blob drops countdown = async {
+and update (splatzz: Splatzz) = async {
+    splatzz.mikis
+    |> List.map(gravity >> move >> step )
+
+    splatzz.keysPressed |> Set.map(step)
+    }
+
+and updateOld  blob drops countdown = async {
   let drops =
     drops
-    |> List.map (gravity >> move >> step (Keyboard.arrows())) 
+    |> List.map (gravity >> move >> step (Keyboard.arrows()))
 
   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
 
