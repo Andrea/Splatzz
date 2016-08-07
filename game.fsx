@@ -1,13 +1,20 @@
 module Game
 open System
 
+type Image =
+    {
+        width : double
+        height : double
+        image : String
+    }
+
 type Sprite =
     {
         x     : double
         y     : double
         vx    : double
         vy    : double
-        image : string
+        image : Image
     }
     with
         member this.ApplyDelta() =
