@@ -1,7 +1,7 @@
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
 #r "game.fsx"
-        
+
 open Fable.Core
 open Fable.Import.Browser
 
@@ -48,11 +48,6 @@ module Keyboard =
     window.addEventListener_keydown(fun e -> update(e, true))
     window.addEventListener_keyup(fun e -> update(e, false))
 
-let width = 900.
-let height = 668.
-let floorHeight = 100.
-let atmosHeight = 300.
-let parachuteWidhtHeight = 62., 74.
 
 Keyboard.init()
 
@@ -70,6 +65,7 @@ let drawGrd (ctx:CanvasRenderingContext2D)
   ctx.fillRect(0.,y0, canvas.width, y1- y0)
 
 let drawBg ctx canvas =
+  let atmosHeight = 300.
   drawGrd ctx canvas
     (0.,atmosHeight) ("blue","purple")
   drawGrd ctx canvas
@@ -77,8 +73,7 @@ let drawBg ctx canvas =
     ("purple","white")
   ctx.fillStyle <- U3.Case1 "black"
   ctx.fillRect
-    ( 0.,canvas.height-floorHeight,
-      canvas.width,floorHeight )
+    ( 0.,canvas.height-floorHeight, canvas.width,floorHeight )
 
 let drawText(text,x,y) =
   ctx.fillStyle <- U3.Case1 "white"
@@ -167,14 +162,12 @@ and completed () = async {
   drawText ("COMPLETED",320.,300.)
   do! Async.Sleep 10000
   return! game () }
-        
 
 and update blob drops countdown = async {
   let drops =
     drops
     |> List.map (gravity >> move >> step (Keyboard.arrows())) 
 
-  
   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
 
   drawBg ctx canvas
