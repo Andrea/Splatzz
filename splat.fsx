@@ -90,50 +90,50 @@ type Blob =
     Radius:float; color:string }
 
 let drawBlob (ctx:CanvasRenderingContext2D)
-    (canvas:HTMLCanvasElement) (blob:Mikishida) =
-  if (blob.image = "") then
+    (canvas:HTMLCanvasElement) (blob:Sprite) =
+  if (blob.image.image = "") then
     ctx.beginPath()
-    ctx.arc
-      ( blob.X, canvas.height - (blob.Y + floorHeight + blob.Radius),
-        blob.Radius, 0., 2. * System.Math.PI, false )
-    ctx.fillStyle <- U3.Case1 blob.color
+   // ctx.arc
+   //   ( blob.X, canvas.height - (blob.Y + floorHeight + blob.Radius),
+  //      blob.Radius, 0., 2. * System.Math.PI, false )
+//    ctx.fillStyle <- U3.Case1 blob.color
     ctx.fill()
     ctx.lineWidth <- 3.
-    ctx.strokeStyle <- U3.Case1 blob.color
+//    ctx.strokeStyle <- U3.Case1 blob.color
     ctx.stroke()
   else
-    if (blob.Y < height - floorHeight - fst parachuteWidhtHeight ) then
+    if (blob.x < height - floorHeight - fst parachuteWidhtHeight ) then
       let i  =blob.image
               |> Win.createImage
-      ctx.drawImage(U3.Case1 i, blob.X, blob.Y)
+      ctx.drawImage(U3.Case1 i, blob.x, blob.y)
 
-let direct (dx,dy) (blob:Mikishida) =
+let direct (dx,dy) (blob:Sprite) =
   { blob with vx = blob.vx + (float dx)/4.0 }
 
-let gravity (blob : Mikishida) =
-  if blob.Y > 0. then { blob with vy = blob.vy + 0.1 }
+let gravity (blob : Sprite) =
+  if blob.y > 0. then { blob with vy = blob.vy + 0.1 }
   else blob
 
-let move (blob:Mikishida) =
+let move (blob : Sprite) =
   { blob with
-      X = blob.X + blob.vx
-      Y = max 0.0 (blob.Y + blob.vy) }
+      x = blob.x + blob.vx
+      y = max 0.0 (blob.y + blob.vy) }
 
 let step dir blob =
   blob |> direct dir |> move
 
-let collide (a:Mikishida) (b:Mikishida) =
-  let dx = (a.X - b.X)*(a.X - b.X)
-  let dy = (a.Y - b.Y)*(a.Y - b.Y)
+let collide (a:Sprite) (b:Sprite) =
+  let dx = (a.x - b.x)*(a.x - b.x)
+  let dy = (a.y - b.y)*(a.y - b.y)
   let dist = sqrt(dx + dy)
-  dist < abs(a.Radius - b.Radius)
+  dist < abs(a.image.width - b.image.width) //YEs this is whatever for now
 
-let bounce (blob:Mikishida) =
+let bounce (blob:Sprite) =
   let n = width
-  if blob.X < 0. then
-    { blob with X = -blob.X; vx = -blob.vx }
-  elif (blob.X > n) then
-    { blob with X = n - (blob.X - n); vx = -blob.vx }
+  if blob.x < 0. then
+    { blob with x = -blob.x; vx = -blob.vx }
+  elif (blob.x > n) then
+    { blob with x = n - (blob.x - n); vx = -blob.vx }
   else blob
 
 let newDrop x color playerNumber=
@@ -143,46 +143,58 @@ let newDrop x color playerNumber=
     width = 88.0;
     heigth = 105.0;
     color=color }
-let p1 () = newDrop (0. + 5.)  p1Color "1"
-let p2 () = newDrop (width - fst parachuteWidhtHeight) p2Color "2"
 
-let p1LandingPad = { X = 300.; Y=0.; Radius=30.; vx=0.; vy=0.; image = "";
-        heigth= 8.; width = 9.; color=p1Color }
+let initialSplat = {
+        mikis = []
+        score  = (0, 0)
+        round = 0
+        wind = 0.0
+        keysPressed = Set.empty
+        }
 
-let p2LandingPad = {p1LandingPad with X=500. ; color = p2Color }
+let bla (x: Mikishida) : Sprite =
+    match x with
+    | Player1(o,t) -> t
+    | Player2 (o,t) -> t
+    | Plane1(x) -> x
+    | Plane2(x) -> x
+    | Platform1(x) -> x
+    | Platform2(x) -> x
 
 
-let rec game () = async {
-  return! update [p1LandingPad; p2LandingPad] [p1 (); p2 ()] 0 }
+let rec update (splatz: Splatzz) = async {
+    // splatzz.mikis
+    // |> List.map(bla >> gravity >> move >> step) 
+    // splatzz.keysPressed |> Set.map(step) 
+    if false then // set some WIN/ LOOSE conditions
+      return! completed()
+    else
+      do! Async.Sleep(int (1000. / 60.))
+      return! update splatz}
 
+and game () = async {
+  return! update initialSplat }
 and completed () = async {
   drawText ("COMPLETED",320.,300.)
   do! Async.Sleep 10000
   return! game () }
 
-and update (splatzz: Splatzz) = async {
-    splatzz.mikis
-    |> List.map(gravity >> move >> step )
+                         
+// and updateOld  blob drops countdown = async {
+//   let drops =
+//     drops
+//     |> List.map (gravity >> move >> step (Keyboard.arrows()))
 
-    splatzz.keysPressed |> Set.map(step)
-    }
+//   let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
+//   drawBg ctx canvas
+//   for drop in drops do drawBlob ctx canvas drop
+//   drawBlob ctx canvas p1LandingPad
+//   drawBlob ctx canvas p2LandingPad
 
-and updateOld  blob drops countdown = async {
-  let drops =
-    drops
-    |> List.map (gravity >> move >> step (Keyboard.arrows()))
-
-  let drops = drops |> List.filter (fun blob -> blob.Y > 0.)
-
-  drawBg ctx canvas
-  for drop in drops do drawBlob ctx canvas drop
-  drawBlob ctx canvas p1LandingPad
-  drawBlob ctx canvas p2LandingPad
-
-  if false then // set some WIN/ LOOSE conditions
-    return! completed()
-  else
-    do! Async.Sleep(int (1000. / 60.))
-    return! update blob drops countdown }
+//   if false then // set some WIN/ LOOSE conditions
+//     return! completed()
+//   else
+//     do! Async.Sleep(int (1000. / 60.))
+//     return! update blob drops countdown }
 
 game () |> Async.StartImmediate
